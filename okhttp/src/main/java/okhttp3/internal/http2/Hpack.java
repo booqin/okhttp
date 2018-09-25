@@ -373,7 +373,6 @@ final class Hpack {
      */
     private static final int SETTINGS_HEADER_TABLE_SIZE_LIMIT = 16384;
 
-    private final Buffer out;
     private final boolean useCompression;
 
     /**

@@ -254,6 +254,7 @@ public final class RealConnection extends Http2Connection.Listener implements Co
     // https://github.com/square/okhttp/issues/3245
     // https://android-review.googlesource.com/#/c/271775/
     try {
+      // 将socket作为输入流获取请求数据
       source = Okio.buffer(Okio.source(rawSocket));
       sink = Okio.buffer(Okio.sink(rawSocket));
     } catch (NullPointerException npe) {
@@ -262,7 +263,7 @@ public final class RealConnection extends Http2Connection.Listener implements Co
       }
     }
   }
-
+  // 建立协议，http2中会开启read流
   private void establishProtocol(ConnectionSpecSelector connectionSpecSelector,
       int pingIntervalMillis, Call call, EventListener eventListener) throws IOException {
     if (route.address().sslSocketFactory() == null) {
@@ -287,6 +288,7 @@ public final class RealConnection extends Http2Connection.Listener implements Co
     }
   }
 
+  //创建http2Connection
   private void startHttp2(int pingIntervalMillis) throws IOException {
     socket.setSoTimeout(0); // HTTP/2 connection timeouts are set per-stream.
     http2Connection = new Http2Connection.Builder(true)
@@ -294,6 +296,7 @@ public final class RealConnection extends Http2Connection.Listener implements Co
         .listener(this)
         .pingIntervalMillis(pingIntervalMillis)
         .build();
+    //start，会监听数据的返回
     http2Connection.start();
   }
 

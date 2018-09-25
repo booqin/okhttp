@@ -1,0 +1,23 @@
+@startuml
+'Alice -> Bob: Authentication Request
+'Bob --> Alice: Authentication Response
+'
+'Alice -> Bob: Another authentication Request
+'Alice <-- Bob: another authentication Response
+
+OkHttpClient -> Cache
+Cache -> InternalCache
+OkHttpClient -> RealCall
+RealCall -> OkHttpClient:internalCache()
+RealCall <-- InternalCache
+RealCall -> CacheInterceptor
+
+activate CacheInterceptor
+CacheInterceptor -> CacheInterceptor:intercept()
+CacheInterceptor -> CacheStrategy
+CacheInterceptor -> InternalCache:put()
+InternalCache -> CacheRequestImpl:body()
+RealCall <<-- CacheInterceptor
+deactivate CacheInterceptor
+
+@enduml

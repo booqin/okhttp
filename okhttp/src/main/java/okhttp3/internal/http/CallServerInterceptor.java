@@ -65,6 +65,7 @@ public final class CallServerInterceptor implements Interceptor {
         // Write the request body if the "Expect: 100-continue" expectation was met.
         realChain.eventListener().requestBodyStart(realChain.call());
         long contentLength = request.body().contentLength();
+        //通过Codec获取sink，reuqsetBody传入sink直接写操作
         CountingSink requestBodyOut =
             new CountingSink(httpCodec.createRequestBody(request, contentLength));
         BufferedSink bufferedRequestBody = Okio.buffer(requestBodyOut);

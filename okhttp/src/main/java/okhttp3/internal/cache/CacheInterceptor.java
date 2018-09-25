@@ -50,12 +50,14 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   @Override public Response intercept(Chain chain) throws IOException {
+    //候选人？
     Response cacheCandidate = cache != null
         ? cache.get(chain.request())
         : null;
 
     long now = System.currentTimeMillis();
-
+    //在CacheStrategy获取networkRequest和cacheResponse，
+    // 生成Cache的策略类，根据状态确定request和response，如处理Cache-Control等
     CacheStrategy strategy = new CacheStrategy.Factory(now, chain.request(), cacheCandidate).get();
     Request networkRequest = strategy.networkRequest;
     Response cacheResponse = strategy.cacheResponse;
@@ -64,11 +66,13 @@ public final class CacheInterceptor implements Interceptor {
       cache.trackResponse(strategy);
     }
 
+    // cacheCandidate不可用了
     if (cacheCandidate != null && cacheResponse == null) {
       closeQuietly(cacheCandidate.body()); // The cache candidate wasn't applicable. Close it.
     }
-
+    // code 504 - Gateway Time-out 充当网关或代理的服务器，未及时从远端服务器获取请求
     // If we're forbidden from using the network and the cache is insufficient, fail.
+    // 1. request和cache都无效的情况下返回504的response
     if (networkRequest == null && cacheResponse == null) {
       return new Response.Builder()
           .request(chain.request())
@@ -82,6 +86,8 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     // If we don't need the network, we're done.
+    // 2. nR为空时，即缓存还在存活期内，返回cache
+    // response的结构中，有单独保存body的字段，内部的cache和net无需再保存
     if (networkRequest == null) {
       return cacheResponse.newBuilder()
           .cacheResponse(stripBody(cacheResponse))
@@ -90,6 +96,7 @@ public final class CacheInterceptor implements Interceptor {
 
     Response networkResponse = null;
     try {
+      // 3.向下一个Intercept传递请求，获取新的response
       networkResponse = chain.proceed(networkRequest);
     } finally {
       // If we're crashing on I/O or otherwise, don't leak the cache body.
@@ -97,9 +104,10 @@ public final class CacheInterceptor implements Interceptor {
         closeQuietly(cacheCandidate.body());
       }
     }
-
+    // cahce可用的前提下，网络请求后 response状态码为304，使用cache，并更新cache
     // If we have a cache response too, then we're doing a conditional get.
     if (cacheResponse != null) {
+      // 304-->Not Modified 根据服务器返回的结果处理缓存
       if (networkResponse.code() == HTTP_NOT_MODIFIED) {
         Response response = cacheResponse.newBuilder()
             .headers(combine(cacheResponse.headers(), networkResponse.headers()))
@@ -113,25 +121,26 @@ public final class CacheInterceptor implements Interceptor {
         // Update the cache after combining headers but before stripping the
         // Content-Encoding header (as performed by initContentStream()).
         cache.trackConditionalCacheHit();
+        //已存在 更新缓存
         cache.update(cacheResponse, response);
         return response;
       } else {
         closeQuietly(cacheResponse.body());
       }
     }
-
+    // 使用新的结果，同时保存到缓存区内
     Response response = networkResponse.newBuilder()
         .cacheResponse(stripBody(cacheResponse))
         .networkResponse(stripBody(networkResponse))
         .build();
-
+    //新增缓存
     if (cache != null) {
       if (HttpHeaders.hasBody(response) && CacheStrategy.isCacheable(response, networkRequest)) {
         // Offer this request to the cache.
         CacheRequest cacheRequest = cache.put(response);
         return cacheWritingResponse(cacheRequest, response);
       }
-
+      // 缓存不为空，不可用的请求方法时移除缓存
       if (HttpMethod.invalidatesCache(networkRequest.method())) {
         try {
           cache.remove(networkRequest);
@@ -143,7 +152,7 @@ public final class CacheInterceptor implements Interceptor {
 
     return response;
   }
-
+  //卸下body
   private static Response stripBody(Response response) {
     return response != null && response.body() != null
         ? response.newBuilder().body(null).build()

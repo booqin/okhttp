@@ -186,7 +186,7 @@ public final class Cache implements Closeable, Flushable {
   public static String key(HttpUrl url) {
     return ByteString.encodeUtf8(url.toString()).md5().hex();
   }
-
+  // 获取put到DiskLruCache中的缓存数据
   @Nullable Response get(Request request) {
     String key = key(request.url());
     DiskLruCache.Snapshot snapshot;
@@ -229,8 +229,9 @@ public final class Cache implements Closeable, Flushable {
       }
       return null;
     }
+    // 不处理非GET的response
     if (!requestMethod.equals("GET")) {
-      // Don't cache non-GET responses. We're technically allowed to cache
+      // Don't cache non-GET responses. We're technically(技术上) allowed to cache
       // HEAD requests and some POST requests, but the complexity of doing
       // so is high and the benefit is low.
       return null;
@@ -239,7 +240,7 @@ public final class Cache implements Closeable, Flushable {
     if (HttpHeaders.hasVaryAll(response)) {
       return null;
     }
-
+    // Entry封装
     Entry entry = new Entry(response);
     DiskLruCache.Editor editor = null;
     try {

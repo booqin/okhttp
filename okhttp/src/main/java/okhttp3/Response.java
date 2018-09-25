@@ -50,6 +50,7 @@ public final class Response implements Closeable {
   final @Nullable ResponseBody body;
   final @Nullable Response networkResponse;
   final @Nullable Response cacheResponse;
+  //prior 预先
   final @Nullable Response priorResponse;
   final long sentRequestAtMillis;
   final long receivedResponseAtMillis;

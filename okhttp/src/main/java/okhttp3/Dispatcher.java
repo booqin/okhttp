@@ -182,6 +182,7 @@ public final class Dispatcher {
 
   /** Used by {@code Call#execute} to signal it is in-flight. */
   synchronized void executed(RealCall call) {
+    //添加到calls的双向链表中
     runningSyncCalls.add(call);
   }
 
