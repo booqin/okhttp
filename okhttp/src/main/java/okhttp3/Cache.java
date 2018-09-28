@@ -180,6 +180,7 @@ public final class Cache implements Closeable, Flushable {
   }
 
   Cache(File directory, long maxSize, FileSystem fileSystem) {
+    //创建cache
     this.cache = DiskLruCache.create(fileSystem, directory, VERSION, ENTRY_COUNT, maxSize);
   }
 

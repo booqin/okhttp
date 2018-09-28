@@ -72,7 +72,7 @@ public final class CacheInterceptor implements Interceptor {
     }
     // code 504 - Gateway Time-out 充当网关或代理的服务器，未及时从远端服务器获取请求
     // If we're forbidden from using the network and the cache is insufficient, fail.
-    // 1. request和cache都无效的情况下返回504的response
+    // 1. request和cache都无效的情况下返回504的response。
     if (networkRequest == null && cacheResponse == null) {
       return new Response.Builder()
           .request(chain.request())

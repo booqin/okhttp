@@ -197,6 +197,7 @@ public final class DiskLruCache implements Closeable, Flushable {
     this.fileSystem = fileSystem;
     this.directory = directory;
     this.appVersion = appVersion;
+    //三个日志文件
     this.journalFile = new File(directory, JOURNAL_FILE);
     this.journalFileTmp = new File(directory, JOURNAL_FILE_TEMP);
     this.journalFileBackup = new File(directory, JOURNAL_FILE_BACKUP);
@@ -222,10 +223,12 @@ public final class DiskLruCache implements Closeable, Flushable {
       }
     }
 
-    // Prefer to pick up where we left off.
+    // Prefer to pick up where we left off（离开）.
     if (fileSystem.exists(journalFile)) {
       try {
+        //读取日志
         readJournal();
+        //处理日志
         processJournal();
         initialized = true;
         return;
@@ -242,7 +245,7 @@ public final class DiskLruCache implements Closeable, Flushable {
         closed = false;
       }
     }
-
+    //如果不存在文件，重建
     rebuildJournal();
 
     initialized = true;
@@ -292,6 +295,7 @@ public final class DiskLruCache implements Closeable, Flushable {
       int lineCount = 0;
       while (true) {
         try {
+          // 循环行读取
           readJournalLine(source.readUtf8LineStrict());
           lineCount++;
         } catch (EOFException endOfJournal) {
@@ -322,6 +326,7 @@ public final class DiskLruCache implements Closeable, Flushable {
     return Okio.buffer(faultHidingSink);
   }
 
+  // key保存在line中，因此需要解析line，将数据根据key创建entry并添加到Map中
   private void readJournalLine(String line) throws IOException {
     int firstSpace = line.indexOf(' ');
     if (firstSpace == -1) {
@@ -364,6 +369,7 @@ public final class DiskLruCache implements Closeable, Flushable {
   /**
    * Computes the initial size and collects garbage as a part of opening the cache. Dirty entries
    * are assumed to be inconsistent and will be deleted.
+   * dirty -> delete
    */
   private void processJournal() throws IOException {
     fileSystem.delete(journalFileTmp);
@@ -439,7 +445,7 @@ public final class DiskLruCache implements Closeable, Flushable {
     validateKey(key);
     Entry entry = lruEntries.get(key);
     if (entry == null || !entry.readable) return null;
-
+    // 获取snapshot
     Snapshot snapshot = entry.snapshot();
     if (snapshot == null) return null;
 
@@ -489,7 +495,6 @@ public final class DiskLruCache implements Closeable, Flushable {
     if (hasJournalErrors) {
       return null; // Don't edit; the journal can't be written.
     }
-
     if (entry == null) {
       entry = new Entry(key);
       lruEntries.put(key, entry);
@@ -678,7 +683,7 @@ public final class DiskLruCache implements Closeable, Flushable {
     journalWriter = null;
     closed = true;
   }
-
+  //移除超出部分
   void trimToSize() throws IOException {
     while (size > maxSize) {
       Entry toEvict = lruEntries.values().iterator().next();
